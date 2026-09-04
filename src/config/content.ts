@@ -8,7 +8,6 @@ export const siteContent = {
   userAvatarUrl: `${import.meta.env.BASE_URL}images/user-avatar-anonymous-short-hair.png`,
   chatApiUrl: (import.meta.env.VITE_CHAT_API_URL ?? '').replace(/\/$/, ''),
   chatFallbackUrl: 'https://udify.app/chat/pNigFJHwFSH5pgcY',
-  chatUrl: 'https://udify.app/chat/pNigFJHwFSH5pgcY',
   isAiDisclosure: '江小满是 AI 角色，回复由你已发布的 Dify 对话提供。',
   privacyNotice: '聊天内容由 Dify 服务处理，本网站不直接读取或保存聊天记录。请勿输入密码、证件号或银行卡信息。',
   emergencyNotice: '如果你或他人正面临现实危险，请立即联系所在地的紧急服务或可信赖的人。',

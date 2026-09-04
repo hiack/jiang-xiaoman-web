@@ -58,7 +58,8 @@ function removeStored(key: string): void {
  * Nothing is ever sent to Dify directly and no API key lives here. Message
  * contents are kept only in memory; localStorage holds just the identifiers.
  */
-export function useChatSession(): ChatSession {
+export function useChatSession(apiUrl?: string): ChatSession {
+  const resolvedApiUrl = apiUrl ?? siteContent.chatApiUrl
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [draft, setDraftState] = useState('')
   const [isSending, setIsSendingState] = useState(false)
@@ -115,7 +116,7 @@ export function useChatSession(): ChatSession {
     let assistantText = ''
     try {
       for await (const event of sendChatMessage({
-        apiUrl: siteContent.chatApiUrl,
+        apiUrl: resolvedApiUrl,
         query: text,
         user: userIdRef.current,
         conversationId: conversationIdRef.current ?? undefined,
