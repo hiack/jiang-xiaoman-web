@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// E2E exercises the real client against a mocked /api/chat proxy, so the app
+// must boot in the "configured" state. This is a local-only, non-secret value.
+if (!process.env.VITE_CHAT_API_URL) {
+  process.env.VITE_CHAT_API_URL = 'http://127.0.0.1:4173'
+}
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
