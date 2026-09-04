@@ -58,7 +58,7 @@ jiang-xiaoman-web/
 - Create: `src/App.tsx`
 - Create: `src/App.test.tsx`
 
-- [ ] **Step 1 写入最小失败测试**
+- [ ] **Step 1 写入最小失败测试和测试工程配置**
 
 创建 `src/App.test.tsx`：
 
@@ -74,8 +74,6 @@ describe('App', () => {
   })
 })
 ```
-
-- [ ] **Step 2 写入项目配置并安装依赖**
 
 创建 `package.json`：
 
@@ -209,6 +207,17 @@ import '@testing-library/jest-dom/vitest'
 </html>
 ```
 
+安装依赖并运行失败测试：
+
+```powershell
+npm install
+npm test
+```
+
+Expected: FAIL，明确显示无法找到 `./App`，并生成 `package-lock.json`。
+
+- [ ] **Step 2 写入通过测试所需的最小应用**
+
 创建 `src/App.tsx`：
 
 ```tsx
@@ -235,11 +244,10 @@ createRoot(document.getElementById('root')!).render(
 创建空的 `src/styles.css`，随后运行：
 
 ```powershell
-npm install
 npm test
 ```
 
-Expected: `1 passed`，并生成 `package-lock.json`。
+Expected: `1 passed`。
 
 - [ ] **Step 3 提交工程骨架**
 
@@ -440,7 +448,13 @@ describe('useNetworkStatus', () => {
 })
 ```
 
-运行后应因模块不存在而失败。
+运行：
+
+```powershell
+npm test -- src/hooks/useNetworkStatus.test.tsx
+```
+
+Expected: FAIL，因为 `useNetworkStatus.ts` 尚不存在。
 
 - [ ] **Step 2 实现在线状态 Hook**
 
@@ -508,7 +522,13 @@ describe('ChatPanel', () => {
 })
 ```
 
-运行后应因组件不存在而失败。
+运行：
+
+```powershell
+npm test -- src/components/ChatPanel.test.tsx
+```
+
+Expected: FAIL，因为 `ChatPanel.tsx` 尚不存在。
 
 - [ ] **Step 4 实现 Dify 对话组件**
 
@@ -628,7 +648,13 @@ describe('SafetyInfo', () => {
 })
 ```
 
-运行后应因组件不存在而失败。
+运行：
+
+```powershell
+npm test -- src/components/SafetyInfo.test.tsx
+```
+
+Expected: FAIL，因为 `SafetyInfo.tsx` 尚不存在。
 
 - [ ] **Step 2 实现安全说明**
 
@@ -669,7 +695,13 @@ describe('App', () => {
 })
 ```
 
-运行后应失败，因为 `App` 尚未组合组件。
+运行：
+
+```powershell
+npm test -- src/App.test.tsx
+```
+
+Expected: FAIL，因为 `App` 尚未组合三个组件。
 
 - [ ] **Step 4 组合最终页面结构**
 
@@ -714,8 +746,62 @@ git commit -m "feat: compose companion experience and safety guidance"
 
 **Files:**
 - Modify: `src/styles.css`
+- Create: `playwright.config.ts`
+- Create: `e2e/home.spec.ts`
 
-- [ ] **Step 1 写入完整视觉样式**
+- [ ] **Step 1 创建浏览器测试配置**
+
+```ts
+import { defineConfig, devices } from '@playwright/test'
+
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: false,
+  reporter: 'line',
+  use: { baseURL: 'http://127.0.0.1:4173', trace: 'retain-on-failure' },
+  webServer: {
+    command: 'npm run dev -- --host 127.0.0.1 --port 4173',
+    url: 'http://127.0.0.1:4173',
+    reuseExistingServer: false,
+  },
+  projects: [
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+    { name: 'mobile', use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } } },
+  ],
+})
+```
+
+- [ ] **Step 2 写入会因缺少双栏样式而失败的测试**
+
+```ts
+import { expect, test } from '@playwright/test'
+
+test.beforeEach(async ({ page }) => {
+  await page.route('https://udify.app/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<main>江小满 Dify 测试替身</main>' })
+  })
+})
+
+test('uses the approved two-column desktop layout', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'desktop-only assertion')
+  await page.goto('/')
+  const columns = await page.locator('.experience-card').evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns,
+  )
+  expect(columns.split(' ')).toHaveLength(2)
+})
+```
+
+运行：
+
+```powershell
+npx playwright install chromium
+npm run test:e2e -- --project=desktop e2e/home.spec.ts
+```
+
+Expected: FAIL，`gridTemplateColumns` 为 `none`，因为最终样式尚未写入。
+
+- [ ] **Step 3 写入完整视觉样式**
 
 将 `src/styles.css` 替换为：
 
@@ -826,53 +912,31 @@ button:focus-visible, a:focus-visible, summary:focus-visible {
 }
 ```
 
-- [ ] **Step 2 运行单元测试和构建**
+- [ ] **Step 4 运行单元测试 浏览器测试和构建**
 
 ```powershell
 npm test
+npm run test:e2e -- --project=desktop e2e/home.spec.ts
 npm run check
 npm run build
 ```
 
-Expected: 三个命令退出码均为 0，`dist/index.html` 存在。
+Expected: 四个命令退出码均为 0，双栏测试通过，`dist/index.html` 存在。
 
-- [ ] **Step 3 提交视觉系统**
+- [ ] **Step 5 提交视觉系统**
 
 ```powershell
-git add src/styles.css
+git add src/styles.css playwright.config.ts e2e/home.spec.ts
 git commit -m "feat: apply approved responsive visual system"
 ```
 
 ## Task 7 添加浏览器冒烟测试和构建产物检查
 
 **Files:**
-- Create: `playwright.config.ts`
-- Create: `e2e/home.spec.ts`
+- Modify: `e2e/home.spec.ts`
 - Create: `scripts/verify-dist.mjs`
 
-- [ ] **Step 1 创建 Playwright 配置**
-
-```ts
-import { defineConfig, devices } from '@playwright/test'
-
-export default defineConfig({
-  testDir: './e2e',
-  fullyParallel: false,
-  reporter: 'line',
-  use: { baseURL: 'http://127.0.0.1:4173', trace: 'retain-on-failure' },
-  webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4173',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: false,
-  },
-  projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
-    { name: 'mobile', use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } } },
-  ],
-})
-```
-
-- [ ] **Step 2 写入浏览器测试**
+- [ ] **Step 1 扩展浏览器测试**
 
 ```ts
 import { expect, test } from '@playwright/test'
@@ -891,6 +955,15 @@ test('shows the approved hero and embedded chat without horizontal overflow', as
   expect(overflow).toBe(false)
 })
 
+test('uses the approved two-column desktop layout', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'desktop-only assertion')
+  await page.goto('/')
+  const columns = await page.locator('.experience-card').evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns,
+  )
+  expect(columns.split(' ')).toHaveLength(2)
+})
+
 test('keeps chat visible in a mobile viewport', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'mobile-only assertion')
   await page.goto('/')
@@ -901,7 +974,7 @@ test('keeps chat visible in a mobile viewport', async ({ page }, testInfo) => {
 })
 ```
 
-- [ ] **Step 3 写入产物安全检查**
+- [ ] **Step 2 写入产物安全检查**
 
 ```js
 import { readFile, readdir, stat } from 'node:fs/promises'
@@ -934,7 +1007,7 @@ for (const file of allFiles) {
   const text = await readFile(file, 'utf8').catch(() => '')
   if (text.includes(requiredChatUrl)) chatUrlFound = true
   for (const pattern of forbidden) {
-    if (pattern.test(text)) throw new Error(`Forbidden content ${pattern} in ${relative(root.pathname, file)}`)
+    if (pattern.test(text)) throw new Error(`Forbidden content ${pattern} in ${relative(root, file)}`)
   }
 }
 
@@ -942,10 +1015,9 @@ if (!chatUrlFound) throw new Error('Approved Dify URL missing from dist')
 console.log(`VERIFY_DIST_PASS files=${allFiles.length}`)
 ```
 
-- [ ] **Step 4 安装 Chromium 并运行全部检查**
+- [ ] **Step 3 运行全部检查**
 
 ```powershell
-npx playwright install chromium
 npm run test:e2e
 npm run build
 npm run verify:dist
@@ -953,7 +1025,7 @@ npm run verify:dist
 
 Expected: desktop 和 mobile 项目通过，最后输出 `VERIFY_DIST_PASS`。
 
-- [ ] **Step 5 提交验证工具**
+- [ ] **Step 4 提交验证工具**
 
 ```powershell
 git add playwright.config.ts e2e scripts
@@ -1177,11 +1249,27 @@ Expected: `visibility` 为 `PRIVATE`，远程地址属于 `hiack/jiang-xiaoman-w
 
 - [ ] **Step 4 尝试启用 GitHub Pages**
 
-使用 GitHub API 将 Pages 构建类型设为 `workflow`，随后触发或等待 `Deploy GitHub Pages`。如果 API 返回账号套餐不支持私有仓库 Pages，则保持仓库私有、记录错误并停止，不改变仓库可见性。
+```powershell
+gh api --method POST 'repos/hiack/jiang-xiaoman-web/pages' -f 'build_type=workflow'
+gh workflow run 'deploy-pages.yml' --repo 'hiack/jiang-xiaoman-web' --ref main
+$runId=gh run list --repo 'hiack/jiang-xiaoman-web' --workflow 'deploy-pages.yml' --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId'
+gh run watch $runId --repo 'hiack/jiang-xiaoman-web' --exit-status
+gh api 'repos/hiack/jiang-xiaoman-web/pages' --jq '.html_url'
+```
+
+Expected: 工作流退出码为 0，并返回 HTTPS 页面地址。如果第一个命令返回账号套餐不支持私有仓库 Pages，则保持仓库私有、记录原始 HTTP 状态和错误摘要并停止，不改变仓库可见性。
 
 - [ ] **Step 5 公网验收**
 
-Pages 成功时，Codex 验证：
+Pages 成功时，先运行：
+
+```powershell
+$siteUrl=gh api 'repos/hiack/jiang-xiaoman-web/pages' --jq '.html_url'
+(Invoke-WebRequest -Uri $siteUrl -Method Head -MaximumRedirection 5).StatusCode
+gh repo view 'hiack/jiang-xiaoman-web' --json visibility,url --jq '{visibility,url}'
+```
+
+Expected: HTTP 状态为 `200`，`visibility` 为 `PRIVATE`。随后 Codex 在浏览器中验证：
 
 - HTTPS 地址返回成功。
 - 页面静态资源均加载。
