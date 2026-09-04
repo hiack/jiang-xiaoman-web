@@ -1,0 +1,104 @@
+:root {
+  color: #362522;
+  background: #d9e3e3;
+  font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255,255,255,.86), transparent 28rem),
+    linear-gradient(145deg, #d9e3e3, #f3e8e2 56%, #d9e3e3);
+}
+button, a { font: inherit; }
+a { color: #8e4c50; text-underline-offset: 3px; }
+button:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 3px solid #7d4145;
+  outline-offset: 3px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.experience-card {
+  width: min(1180px, 100%);
+  min-height: min(760px, calc(100vh - 56px));
+  display: grid;
+  grid-template-columns: 46% 54%;
+  overflow: hidden;
+  border: 1px solid rgba(234, 223, 217, .9);
+  border-radius: 30px;
+  background: #fbf6f1;
+  box-shadow: 0 30px 80px rgba(54, 37, 34, .18);
+}
+
+.character-hero {
+  position: relative;
+  min-height: 660px;
+  overflow: hidden;
+  color: white;
+  background: #362522;
+}
+.character-hero__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 31%; }
+.character-hero__scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(25,18,16,.08) 28%, rgba(25,18,16,.84) 100%); }
+.character-hero__brand { position: absolute; top: 28px; left: 30px; margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 1.2rem; letter-spacing: .16em; text-shadow: 0 2px 12px rgba(0,0,0,.38); }
+.character-hero__copy { position: absolute; right: 34px; bottom: 34px; left: 30px; }
+.character-hero__scene { margin: 0 0 12px; font-size: .76rem; letter-spacing: .16em; opacity: .82; }
+.character-hero h1 { margin: 0 0 12px; font-family: Georgia, "Songti SC", serif; font-size: clamp(2rem, 3.5vw, 3rem); font-weight: 500; line-height: 1.2; }
+.character-hero__copy > p:last-child { max-width: 30rem; margin: 0; font-size: .95rem; line-height: 1.8; opacity: .92; }
+
+.conversation-column { min-width: 0; display: flex; flex-direction: column; background: radial-gradient(circle at 100% 0, #f0d4d0, transparent 28rem), #fbf6f1; }
+.chat-panel { min-height: 0; flex: 1; display: flex; flex-direction: column; padding: 22px 24px 12px; }
+.chat-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 54px; padding-bottom: 14px; border-bottom: 1px solid #eadfd9; }
+.chat-panel__header > a { flex: none; font-size: .82rem; }
+.chat-panel__identity { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.chat-panel__identity img { width: 44px; height: 44px; object-fit: cover; object-position: center 24%; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 1px #eadfd9; }
+.chat-panel__identity strong, .chat-panel__identity span { display: block; }
+.chat-panel__identity span { margin-top: 3px; color: #708b78; font-size: .73rem; }
+.chat-panel__identity i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #75a681; }
+.chat-panel__body { position: relative; min-height: 480px; flex: 1; margin-top: 14px; overflow: hidden; border: 1px solid #eadfd9; border-radius: 18px; background: rgba(255,255,255,.7); }
+.chat-frame { width: 100%; height: 100%; min-height: 480px; border: 0; opacity: 0; transition: opacity .24s ease; }
+.chat-frame--ready { opacity: 1; }
+.chat-state { position: absolute; z-index: 1; inset: 0; display: grid; align-content: center; justify-items: center; gap: 10px; padding: 28px; text-align: center; color: #79655f; background: #fbf6f1; }
+.chat-state h2, .chat-state p { max-width: 28rem; margin: 0; }
+.chat-state h2 { color: #362522; font-family: Georgia, "Songti SC", serif; font-weight: 500; }
+.chat-state__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 8px; }
+.chat-state__actions button, .chat-state__actions a { min-height: 42px; padding: 10px 16px; border: 1px solid #cf777a; border-radius: 13px; }
+.chat-state__actions button { color: white; background: #cf777a; cursor: pointer; }
+.chat-state__actions a { background: white; }
+.chat-panel__disclosure { margin: 10px 0 0; color: #8f7d76; font-size: .7rem; text-align: center; }
+.safety-info { margin: 0 24px 18px; color: #79655f; font-size: .77rem; }
+.safety-info summary { width: fit-content; cursor: pointer; color: #6e4a46; }
+.safety-info div { max-width: 48rem; padding-top: 8px; line-height: 1.65; }
+.safety-info p { margin: 6px 0; }
+
+@media (max-width: 800px) {
+  .app-shell { display: block; padding: 0; }
+  .experience-card { min-height: 100vh; grid-template-columns: 1fr; border: 0; border-radius: 0; box-shadow: none; }
+  .character-hero { min-height: 168px; }
+  .character-hero__image { object-position: center 24%; }
+  .character-hero__scrim { background: linear-gradient(180deg, rgba(25,18,16,.05), rgba(25,18,16,.7)); }
+  .character-hero__brand { top: 18px; left: 18px; font-size: .95rem; }
+  .character-hero__copy { right: 18px; bottom: 14px; left: 18px; }
+  .character-hero__scene { margin-bottom: 5px; font-size: .62rem; }
+  .character-hero h1 { margin-bottom: 0; font-size: 1.45rem; }
+  .character-hero__copy > p:last-child { display: none; }
+  .conversation-column { min-height: calc(100vh - 168px); }
+  .chat-panel { min-height: calc(100vh - 220px); padding: 12px 12px 8px; }
+  .chat-panel__header { min-height: 48px; padding-bottom: 10px; }
+  .chat-panel__identity img { width: 38px; height: 38px; }
+  .chat-panel__body, .chat-frame { min-height: 520px; }
+  .safety-info { margin: 0 14px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
