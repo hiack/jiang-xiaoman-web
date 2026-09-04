@@ -118,7 +118,74 @@ minimum implementation, then green, then a commit.
    needed fields (defense in depth beyond the client normalizer).
 7. **`npm install -D @vercel/node@12.0.0`** reported `5 vulnerabilities`
    (2 moderate, 3 high) in the dependency tree audit; private repo, no real key
-   involved — flagged for review, not auto-fixed.
+   involved — flagged for review, then **fixed in the follow-up below**
+   (dependency removed, audit total 0).
+
+## Follow-up: remove vulnerable type-only dependency
+
+Date: 2026-09-04
+Branch: `feature/custom-chat-window` (worktree `custom-chat-window`)
+Executed by: Pi Coding Agent, `pi_custom_chat_audit_fix` task
+
+### Finding
+
+- `npm ci` reported **5 vulnerabilities** (2 moderate, 3 high).
+- `npm audit --json` traced every finding to the direct devDependency
+  `@vercel/node@12.0.0` and its transitive tree: `@vercel/static-config`,
+  `ajv`, `path-to-regexp`, and `undici`.
+
+### Root cause
+
+- `api/chat.ts` imported `@vercel/node` **only for TypeScript types**
+  (`VercelRequest`, `VercelResponse`) via `import type`. At runtime Vercel
+  Node Functions supply the actual request/response objects; the handler never
+  imports or calls anything from the package at runtime.
+- Because the package was still a declared devDependency, its full transitive
+  tree (including a nested `typescript`, `es-module-lexer`, `ajv`,
+  `path-to-regexp`, `undici`, …) entered `package-lock.json` and the audit.
+
+### Change
+
+1. **Removed `@vercel/node` from `package.json` and `package-lock.json`** with
+   the package manager: `npm uninstall --save-dev @vercel/node`
+   (110 packages removed, `found 0 vulnerabilities`).
+2. **Replaced the type-only import in `api/chat.ts`** with small local
+   structural interfaces describing only the members this handler reads and
+   writes:
+   - `ChatRequest` — `headers.origin`, `method`, `body`.
+   - `ChatResponse` — `status`, `json`, `setHeader`, `write`, `flushHeaders`,
+     `end`.
+   No replacement package was added. Runtime logic types that remain (`fetch`,
+   `Response`, `ReadableStream`, `RequestInit`) come from `@types/node` and
+   its `undici-types`, which stay as devDependencies (audit-clean).
+3. **Default handler signature preserved**: `handler(req, res): Promise<void>`
+   stays structurally assignable to Vercel's Node Function handler
+   (`VercelApiHandler`); proxy behavior is unchanged.
+
+No Dify key was requested or used, and no push/deploy/GitHub/remote changes
+were made.
+
+### Verification (exact fresh results, after the fix)
+
+| Command | Result |
+| --- | --- |
+| `npm audit --json` | `vulnerabilities` empty — **total 0** (0 critical/high/moderate/low) |
+| `npm test` | Vitest: **12 files passed, 54 tests passed, 0 failures** |
+| `npm run check` | `tsc -b` exit **0** |
+| `npm run build` | Vite build **succeeded** (26 modules, 200.72 kB JS) |
+| `npm run verify:dist` | **`VERIFY_DIST_PASS files=5`** (exit 0) |
+| `npm run test:e2e` | Playwright: **7 passed, 3 skipped** (project-conditional), 0 failed |
+| `git diff --check` | **Clean** (exit 0) |
+| `git status --short` | Clean after final commit |
+
+### Files changed
+
+- `package.json` — removed `@vercel/node` devDependency.
+- `package-lock.json` — regenerated without `@vercel/node` and its transitive
+  tree.
+- `api/chat.ts` — replaced the `@vercel/node` type-only import with local
+  `ChatRequest`/`ChatResponse` structural interfaces.
+- `reports/pi-custom-chat-report.md` — this section.
 
 ## Deployment prerequisites (secret phase — outside this agent's scope)
 

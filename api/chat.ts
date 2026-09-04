@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   createDifyRequest,
   isAllowedOrigin,
@@ -6,6 +5,29 @@ import {
   validateBody,
   type ValidatedChatBody,
 } from './chat-core'
+
+/**
+ * Structural stand-ins for the request/response objects the Vercel Node
+ * Function runtime supplies. `@vercel/node` used to provide these types, but
+ * it was a type-only devDependency whose transitive tree (`ajv`,
+ * `path-to-regexp`, `undici`, `@vercel/static-config`) carried audit
+ * advisories, so the handler now describes only the members it reads/writes.
+ * The shape stays structurally assignable to a Vercel `VercelApiHandler`.
+ */
+interface ChatRequest {
+  headers: { origin?: string | string[] | undefined }
+  method?: string
+  body: unknown
+}
+
+interface ChatResponse {
+  status(statusCode: number): ChatResponse
+  json(body: unknown): ChatResponse
+  setHeader(name: string, value: string | readonly string[]): void
+  write(chunk: string): boolean
+  flushHeaders(): void
+  end(): void
+}
 
 const DIFY_ENDPOINT = 'https://api.dify.ai/v1/chat-messages'
 const ALLOWED_ORIGINS = [
@@ -17,12 +39,12 @@ const PUBLIC_STREAM_ERROR = '对话服务暂时没有回应，请稍后再试。
 
 const ALLOWED_EVENT_NAMES = new Set(['message', 'agent_message', 'message_end', 'error'])
 
-function originOf(req: VercelRequest): string | undefined {
+function originOf(req: ChatRequest): string | undefined {
   const value = req.headers.origin
   return typeof value === 'string' ? value : undefined
 }
 
-function setCorsHeaders(res: VercelResponse, origin: string) {
+function setCorsHeaders(res: ChatResponse, origin: string) {
   res.setHeader('Access-Control-Allow-Origin', origin)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -67,7 +89,7 @@ function normalizeEvent(rawEvent: string): string | null {
   return `data: ${JSON.stringify({ event: 'message_end', conversation_id: conversationId })}`
 }
 
-async function pipeAllowedEvents(body: ReadableStream<Uint8Array>, res: VercelResponse) {
+async function pipeAllowedEvents(body: ReadableStream<Uint8Array>, res: ChatResponse) {
   const reader = body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
@@ -94,7 +116,7 @@ async function pipeAllowedEvents(body: ReadableStream<Uint8Array>, res: VercelRe
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: ChatRequest, res: ChatResponse) {
   const origin = originOf(req)
   if (!isAllowedOrigin(origin, ALLOWED_ORIGINS)) {
     res.status(403).json({ message: '来源不受支持。' })
