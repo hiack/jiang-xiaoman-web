@@ -206,3 +206,99 @@ prompt/model/knowledge-base changes, no browser-held key, no message-content
 persistence, and the public production site was not touched.
 
 READY_FOR_SECRET_SETUP: true — no real Dify API key was requested, stored, or committed.
+
+## Follow-up: fix Vercel runtime crash ERR_MODULE_NOT_FOUND
+
+Date: 2026-09-05
+Branch: `feature/custom-chat-window` (worktree `custom-chat-window`)
+Executed by: Pi Coding Agent, runtime-error fix task
+
+### Reproduction (real production logs)
+
+Two production deployments of `jiang-xiaoman-web-proxy` (both Ready, build
+succeeded) crashed on **every** request. `vercel logs` shows:
+
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/api/chat-core'
+imported from /var/task/api/chat.js
+```
+
+The crash hit both `OPTIONS /api/chat` (23:52:41) and `POST /api/chat`
+(23:52:42) — i.e. the function module failed to load before the handler ran.
+
+### Root cause
+
+Vercel zero-config Node functions compile **each `api/*.ts` file into its own
+standalone lambda** (the deployment contained three: `api/chat`,
+`api/chat-core`, `api/chat-core.test`). Because `package.json` has
+`"type": "module"`, the emitted `/var/task/api/chat.js` is ESM and keeps the
+source-level relative import `'./chat-core'` — without a `.js` extension.
+Node ESM does not do extension resolution, so the sibling module can never
+load; the whole class of "function file imports sibling module" is unsafe on
+this pipeline regardless of whether the sibling is traced into the lambda.
+
+### Change
+
+1. **`api/chat.ts` is now fully self-contained.** The `chat-core.ts` helpers
+   (`MAX_QUERY_LENGTH`, `validateBody`, `isAllowedOrigin`,
+   `createDifyRequest`, `publicError`, `ChatValidationError`) were merged
+   into the single function file and remain exported for tests. A comment at
+   the top of the file documents the packaging rule so the layout cannot
+   silently regress.
+2. **`api/chat-core.ts` deleted; `api/chat-core.test.ts` moved to
+   `api-tests/chat.test.ts`** (imports `../api/chat`). Rationale: every
+   `.ts` file under `api/` ships as a serverless function — `chat-core` and
+   `chat-core.test` lambdas were deployed as junk endpoints — and Vercel's
+   local `vercel build` also rejects test files under `api/`.
+3. **Added 7 handler regression tests** (origin rejection, OPTIONS
+   preflight, 405, 503 without secret, 400 invalid body before upstream,
+   401 upstream mapped to public copy, SSE stream normalization) that pin
+   the module-load surface of the deployed entry point.
+4. **`.gitignore` reordered**: `.vercel` and `.env*` (Vercel CLI writes
+   `.env.local` containing tokens after login/link) are ignored while
+   `!.env.example` stays effective.
+
+### Verification (fresh results after the fix)
+
+| Command | Result |
+| --- | --- |
+| `npm test` | Vitest: **12 files passed, 61 tests passed, 0 failures** |
+| `npm run check` | `tsc -b` exit **0** |
+| `npm run build` | Vite build **succeeded** |
+| `npm run verify:dist` | **`VERIFY_DIST_PASS files=5`** |
+| `npm run test:e2e` | Playwright: **7 passed, 3 skipped**, 0 failed |
+| `git diff --check` | Clean |
+| Local `npx vercel build` | Still errors on Windows CLI with the repo TS 7 devDependency ("TypeScript did not emit an output") — pre-existing local-CLI quirk; the Linux cloud build emits lambdas normally (both crashed deployments built Ready), so cloud parity is unaffected |
+| Live production deploy | Post-fix smoke: see below |
+
+### Files changed
+
+- `api/chat.ts` — self-contained handler (merged `chat-core.ts`, local
+  import removed, header comment documents the packaging rule).
+- `api/chat-core.ts` — deleted.
+- `api/chat-core.test.ts` — moved to `api-tests/chat.test.ts`.
+- `api-tests/chat.test.ts` — moved tests + 7 new handler regression tests.
+- `tsconfig.node.json` — includes `api-tests/**/*.ts`.
+- `.gitignore` — `.vercel`/`.env*` ignored, `!.env.example` last.
+- `reports/pi-custom-chat-report.md` — this section.
+
+### Live verification
+
+Redeployed the fix to Vercel production (`jiang-xiaoman-web-proxy-8it36rny7`,
+Ready, single `api/chat` lambda) and exercised the deployed endpoint with
+`Origin: https://hiack.github.io`:
+
+| Request | Result |
+| --- | --- |
+| `OPTIONS /api/chat` | **204** (preflight passes) |
+| `POST` with `Origin: https://evil.example` | **403** `来源不受支持。` |
+| `POST` with empty query | **400** `请求内容无效。` |
+| `POST` valid body | **401** `对话服务配置异常，请稍后再试。` (public copy of upstream Dify 401; no internals leaked) |
+
+`vercel logs` after the smoke run shows only the four request lines with **no
+error entries** — the pre-fix crashes (`ERR_MODULE_NOT_FOUND` on OPTIONS and
+POST) are gone. The proxy itself is fixed; note that Dify currently rejects
+the stored `DIFY_API_KEY` with 401 (key added interactively on 2026-09-04
+23:51), so until a valid key is set, real conversations still return the
+public "配置异常" message. No code change is needed for that — re-add the
+secret with `vercel env add DIFY_API_KEY production --sensitive` and redeploy.
