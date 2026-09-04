@@ -2,9 +2,14 @@ node_modules/
 dist/
 playwright-report/
 test-results/
-.env
-.env.*
-!.env.example
 .superpowers/
 .worktrees/
 *.log
+
+# Local tooling state: Vercel CLI link data and any .env* file. Never commit
+# real secrets (Vercel writes .env.local with tokens after login/link).
+.vercel
+.env
+.env.*
+.env*
+!.env.example
