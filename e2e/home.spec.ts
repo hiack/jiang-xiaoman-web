@@ -6,6 +6,14 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
+test('shows the approved hero and embedded chat without horizontal overflow', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: '“……你来了呀。”' })).toBeVisible()
+  await expect(page.getByTitle('与江小满对话')).toBeVisible()
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+  expect(overflow).toBe(false)
+})
+
 test('uses the approved two-column desktop layout', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'desktop-only assertion')
   await page.goto('/')
@@ -13,4 +21,13 @@ test('uses the approved two-column desktop layout', async ({ page }, testInfo) =
     getComputedStyle(element).gridTemplateColumns,
   )
   expect(columns.split(' ')).toHaveLength(2)
+})
+
+test('keeps chat visible in a mobile viewport', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'mobile-only assertion')
+  await page.goto('/')
+  const frame = page.getByTitle('与江小满对话')
+  await expect(frame).toBeVisible()
+  const box = await frame.boundingBox()
+  expect(box?.y).toBeLessThan(360)
 })
