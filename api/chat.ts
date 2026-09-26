@@ -145,6 +145,9 @@ export function publicError(status: number): { status: number; message: string }
 const DIFY_ENDPOINT = 'https://api.dify.ai/v1/chat-messages'
 const ALLOWED_ORIGINS = [
   'https://hiack.github.io',
+  // Custom Pages apex domain; the allow-list stays exact, so the unconfigured
+  // www host is deliberately absent.
+  'https://tangzhaochu.com',
   'http://127.0.0.1:4173',
   'http://localhost:4173',
 ]

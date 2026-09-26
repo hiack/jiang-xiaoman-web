@@ -24,15 +24,23 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # configure-pages reports where Pages actually serves this repository.
+      # Its base_path output is "/jiang-xiaoman-web" for the github.io project
+      # URL and "" for the custom apex domain (tangzhaochu.com), so the build
+      # below must consume it: a site served from the apex root needs
+      # /assets/..., not /jiang-xiaoman-web/assets/.... This step must run
+      # before the build that uses the output.
+      - uses: actions/configure-pages@v5
+        id: pages
       # Unit tests must run in the unconfigured default (no proxy URL), which
-      # is what every test asserts; VITE_CHAT_API_URL is a build-time input
-      # only, injected below for the Pages artifact.
+      # is what every test asserts; VITE_CHAT_API_URL and PAGES_BASE_PATH are
+      # build-time inputs only, injected below for the Pages artifact.
       - run: npm test
       - run: npm run build
         env:
           VITE_CHAT_API_URL: ${{ vars.VITE_CHAT_API_URL }}
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
       - run: npm run verify:dist
-      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist

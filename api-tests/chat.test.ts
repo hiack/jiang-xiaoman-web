@@ -11,8 +11,10 @@ import handler, {
 
 const FAKE_KEY = 'app-fake-key-abcdef0123456789-never-real'
 
+// Mirrors ALLOWED_ORIGINS in api/chat.ts, including the custom apex domain.
 const ALLOWED = [
   'https://hiack.github.io',
+  'https://tangzhaochu.com',
   'http://127.0.0.1:4173',
   'http://localhost:4173',
 ]
@@ -20,6 +22,7 @@ const ALLOWED = [
 describe('isAllowedOrigin', () => {
   it('matches allowed production and local origins exactly', () => {
     expect(isAllowedOrigin('https://hiack.github.io', ALLOWED)).toBe(true)
+    expect(isAllowedOrigin('https://tangzhaochu.com', ALLOWED)).toBe(true)
     expect(isAllowedOrigin('http://127.0.0.1:4173', ALLOWED)).toBe(true)
     expect(isAllowedOrigin('http://localhost:4173', ALLOWED)).toBe(true)
   })
@@ -29,7 +32,45 @@ describe('isAllowedOrigin', () => {
     expect(isAllowedOrigin('https://hiack.github.io.evil.example', ALLOWED)).toBe(false)
     expect(isAllowedOrigin('https://hiack.github.io/', ALLOWED)).toBe(false)
     expect(isAllowedOrigin('http://localhost:4173.evil.example', ALLOWED)).toBe(false)
+    // The custom domain is allowed at its apex only: no www host is configured.
+    expect(isAllowedOrigin('https://www.tangzhaochu.com', ALLOWED)).toBe(false)
+    expect(isAllowedOrigin('http://tangzhaochu.com', ALLOWED)).toBe(false)
+    expect(isAllowedOrigin('https://tangzhaochu.com/', ALLOWED)).toBe(false)
+    expect(isAllowedOrigin('https://tangzhaochu.com.evil.example', ALLOWED)).toBe(false)
     expect(isAllowedOrigin(undefined, ALLOWED)).toBe(false)
+  })
+})
+
+describe('custom apex domain routing', () => {
+  // A browser page served from tangzhaochu.com sends that exact Origin, so the
+  // proxy must let it through the same way it already does for github.io.
+  const APEX = 'https://tangzhaochu.com'
+
+  it('accepts the custom apex for preflight and for POST requests', async () => {
+    const preflight = makeResponse()
+    await handler(
+      makeRequest({ method: 'OPTIONS', headers: { origin: APEX } }),
+      asHandlerResponse(preflight),
+    )
+    expect(preflight.statusCode).toBe(204)
+    expect(preflight.headers['Access-Control-Allow-Origin']).toBe(APEX)
+
+    // Without DIFY_API_KEY the handler must stop at 503, not 403: reaching it
+    // proves the apex origin passed the allow-list.
+    const post = makeResponse()
+    await handler(makeRequest({ headers: { origin: APEX } }), asHandlerResponse(post))
+    expect(post.statusCode).toBe(503)
+    expect(post.headers['Access-Control-Allow-Origin']).toBe(APEX)
+  })
+
+  it('still rejects the unrequested www variant', async () => {
+    const res = makeResponse()
+    await handler(
+      makeRequest({ headers: { origin: 'https://www.tangzhaochu.com' } }),
+      asHandlerResponse(res),
+    )
+    expect(res.statusCode).toBe(403)
+    expect(res.headers['Access-Control-Allow-Origin']).toBeUndefined()
   })
 })
 
