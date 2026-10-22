@@ -148,6 +148,7 @@ const ALLOWED_ORIGINS = [
   // Custom Pages apex domain; the allow-list stays exact, so the unconfigured
   // www host is deliberately absent.
   'https://tangzhaochu.com',
+  'https://home.tangzhaochu.com',
   'http://127.0.0.1:4173',
   'http://localhost:4173',
 ]
