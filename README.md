@@ -31,3 +31,9 @@ npm run test:e2e
 每实例12次/分钟/IP只是尽力限制，不是全局额度或账户权限隔离。前台仅供虚构案例体验；不读取训练记录/账号，不调用历史/删除接口。上线前须启用该应用API并将专用密钥写入此项目的Production Secret，再验证真实虚构案例；未完成时不能宣称已接通。
 
 验证：`npm test -- --exclude '.worktrees/**'`、`npm run check`；新增 API mock 覆盖正常流、专用凭据缺失、输入/来源/节流与错误脱敏。
+
+## 2026-10-25 个人营养复盘接口准备（默认关闭）
+
+新增 `/api/nutrition-review`，只供本人登录账号的后续复盘联调。`NUTRITION_REVIEW_ENABLED`默认不启用；还需OWNER_ACCOUNT_ID（与训练服务一致）、NUTRITION_AUTH_URL（训练API HTTPS origin）和原有Production Secret NUTRITION_API_KEY。当前用户尚未注册，没有配置或启用。GET只返回configured；POST只接受version/goal/items闭合数值契约，先调用训练 `/api/nutrition/permit`鉴权并预留默认10次/UTC日的跨实例配额，再使用服务端生成的归属标识调用已有AI。重新计算已吃/计划，模型仅能返回受支持提醒标识；越界/附加字段/不合规输出拒绝，不写回饮食。DELETE以相同归属验证上游204；返回fullErasureVerified=false，不把API删除当作日志、备份完整清除证明。CORS仅训练域，凭据与原始上游错误不返回页面。
+
+此分支89项测试通过（含17项新接口固定数据/mock），类型通过；不代表现有模型已通过结构化协议或完整删除核实。启用前须注册绑定、实际模型固定案例、处理/删除说明和逐次确认发送/删除的前端联调；旧虚构案例对话不宣称升级。没有新增密钥、模型或套餐。
